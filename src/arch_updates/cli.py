@@ -31,7 +31,7 @@ def main() -> None:
         add_help=False,
         help="Update packages and perform cleanup",
         description=(
-            "Synchronize and upgrade all packages (pacman, AUR, flatpak),"
+            "Synchronize and upgrade all packages (pacman, AUR, flatpak, node),"
             " then remove orphaned dependencies and clean package caches"
         ),
     )
@@ -72,8 +72,8 @@ def main() -> None:
         add_help=False,
         help="Check for available updates",
         description=(
-            "Query pacman, AUR helper, and flatpak for available package"
-            " updates and display a summary grouped by source"
+            "Query pacman, AUR helper, flatpak, and node for available"
+            " package updates and display a summary grouped by source"
         ),
     )
     p_check.add_argument("-h", "--help", action="help", help=argparse.SUPPRESS)
@@ -85,6 +85,8 @@ def main() -> None:
                          help="Skip checking AUR updates")
     p_check.add_argument("--no-flatpak", action="store_true", default=None,
                          help="Skip checking flatpak updates")
+    p_check.add_argument("--no-node", action="store_true", default=None,
+                         help="Skip checking Node global package updates")
     p_check.add_argument("--save", action="store_true",
                          help="Save current options as defaults")
 
@@ -166,16 +168,23 @@ def main() -> None:
                 args.no_flatpak if args.no_flatpak is not None
                 else cfg_check.get("no_flatpak", False)
             )
-            if no_pacman and no_aur and no_flatpak:
+            no_node = (
+                args.no_node if args.no_node is not None
+                else cfg_check.get("no_node", False)
+            )
+            if no_pacman and no_aur and no_flatpak and no_node:
                 parser.error("All update sources have been disabled — nothing to check")
             if args.save:
                 cfg = load_config()
-                cfg["check"] = {"no_pacman": no_pacman, "no_aur": no_aur, "no_flatpak": no_flatpak}
+                cfg["check"] = {"no_pacman": no_pacman, "no_aur": no_aur,
+                                "no_flatpak": no_flatpak, "no_node": no_node}
                 save_config(cfg)
             if args.notify:
-                sys.exit(do_check(no_pacman=no_pacman, no_aur=no_aur, no_flatpak=no_flatpak))
+                sys.exit(do_check(no_pacman=no_pacman, no_aur=no_aur, no_flatpak=no_flatpak,
+                                  no_node=no_node))
             else:
-                sys.exit(check_updates(no_pacman=no_pacman, no_aur=no_aur, no_flatpak=no_flatpak))
+                sys.exit(check_updates(no_pacman=no_pacman, no_aur=no_aur, no_flatpak=no_flatpak,
+                                       no_node=no_node))
         elif args.command == "cleanup":
             sys.exit(do_cleanup(
                 keep=args.keep, dry_run=args.dry_run,

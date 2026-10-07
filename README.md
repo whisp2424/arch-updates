@@ -33,7 +33,7 @@ arch-updates [--version] <command>
 
 | Command   | Description                                                                            |
 | --------- | -------------------------------------------------------------------------------------- |
-| `update`  | Sync and upgrade official, AUR, and Flatpak packages, then run cleanup                 |
+| `update`  | Sync and upgrade official, AUR, Flatpak, and Node packages, then run cleanup |
 | `cleanup` | Remove orphans, trim pacman cache, wipe AUR build cache, clean unused Flatpak runtimes |
 | `check`   | Query all sources for available updates                                                |
 | `news`    | Read or get notified about Arch Linux news                                             |

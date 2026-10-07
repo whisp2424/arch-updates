@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 
 from colorama import Fore, Style
 
-from arch_updates.config import get_aur_config, get_terminal, load_config
+from arch_updates.config import get_aur_config, get_node_manager, get_terminal, load_config
 from arch_updates.news import get_unread_news
 from arch_updates.notify import notify
 from arch_updates.types import UpdateData
@@ -16,14 +17,17 @@ def get_update_data(
     no_pacman: bool = False,
     no_aur: bool = False,
     no_flatpak: bool = False,
+    no_node: bool = False,
 ) -> UpdateData:
     result: UpdateData = {
         "pacman_list": "",
         "aur_lines": [],
         "flatpak_list": "",
+        "node_list": "",
         "pacman_count": 0,
         "aur_count": 0,
         "flatpak_count": 0,
+        "node_count": 0,
         "total": 0,
     }
 
@@ -84,13 +88,41 @@ def get_update_data(
         except subprocess.TimeoutExpired:
             print(c("error:", Fore.RED), "flatpak update check timed out", file=sys.stderr)
 
+    node_list = ""
+    if not no_node:
+        manager = get_node_manager()
+        if manager:
+            try:
+                node_r = subprocess.run(
+                    [manager, "outdated", "-g", "--json"],
+                    capture_output=True, text=True, timeout=120,
+                )
+                out = node_r.stdout.strip()
+                if out:
+                    pkgs = json.loads(out)
+                    lines = [
+                        f"{name} {info.get('current', '?')} -> {info.get('latest', '?')}"
+                        for name, info in sorted(pkgs.items())
+                    ]
+                    node_list = "\n".join(lines)
+            except FileNotFoundError:
+                print(c("error:", Fore.RED), f"'{manager}' not found", file=sys.stderr)
+            except subprocess.TimeoutExpired:
+                print(c("error:", Fore.RED), f"{manager} update check timed out", file=sys.stderr)
+            except (json.JSONDecodeError, AttributeError):
+                print(c("error:", Fore.RED), f"could not parse {manager} outdated output",
+                      file=sys.stderr)
+
     result["pacman_list"] = pacman_list
     result["aur_lines"] = aur_lines
     result["flatpak_list"] = flatpak_list
+    result["node_list"] = node_list
     result["pacman_count"] = len(pacman_list.splitlines()) if pacman_list else 0
     result["aur_count"] = len(aur_lines)
     result["flatpak_count"] = len(flatpak_list.splitlines()) if flatpak_list else 0
-    result["total"] = result["pacman_count"] + result["aur_count"] + result["flatpak_count"]
+    result["node_count"] = len(node_list.splitlines()) if node_list else 0
+    result["total"] = (result["pacman_count"] + result["aur_count"]
+                       + result["flatpak_count"] + result["node_count"])
     return result
 
 
@@ -129,14 +161,24 @@ def print_updates(data: UpdateData) -> None:
         for line in data["flatpak_list"].splitlines():
             print(f"  {line}")
 
+    if data["node_count"]:
+        if not first:
+            print()
+        first = False
+        print(c("::", Fore.CYAN, Style.BRIGHT), c(f"node ({data['node_count']})", Style.BRIGHT))
+        for line in data["node_list"].splitlines():
+            print(f"  {line}")
+
 
 def check_updates(
     no_pacman: bool = False,
     no_aur: bool = False,
     no_flatpak: bool = False,
+    no_node: bool = False,
 ) -> int:
     print(c("::", Fore.CYAN, Style.BRIGHT), c("Checking for updates...", Style.BRIGHT))
-    data = get_update_data(no_pacman=no_pacman, no_aur=no_aur, no_flatpak=no_flatpak)
+    data = get_update_data(no_pacman=no_pacman, no_aur=no_aur, no_flatpak=no_flatpak,
+                           no_node=no_node)
     print_updates(data)
     return 0
 
@@ -203,6 +245,20 @@ def do_update(no_cleanup: bool = False) -> int:
                     errors.append("Flatpak packages")
                     aborted = True
 
+            if data["node_count"] and not aborted:
+                print()
+                manager = get_node_manager()
+                if manager:
+                    try:
+                        rc = run_step(f"Updating Node global packages ({manager})...",
+                                      [manager, "update", "-g"])
+                        if rc != 0:
+                            errors.append("Node global packages")
+                    except KeyboardInterrupt:
+                        print()
+                        errors.append("Node global packages")
+                        aborted = True
+
             if data["aur_count"] and not aborted:
                 print()
                 print(c("==>", Fore.CYAN, Style.BRIGHT),
@@ -252,13 +308,15 @@ def do_check(
     no_pacman: bool = False,
     no_aur: bool = False,
     no_flatpak: bool = False,
+    no_node: bool = False,
 ) -> int:
     if get_terminal() is None:
         print(c("error:", Fore.RED), "a terminal emulator must be configured", file=sys.stderr)
         return 1
 
     print(c("::", Fore.CYAN, Style.BRIGHT), c("Checking for updates...", Style.BRIGHT))
-    data = get_update_data(no_pacman=no_pacman, no_aur=no_aur, no_flatpak=no_flatpak)
+    data = get_update_data(no_pacman=no_pacman, no_aur=no_aur, no_flatpak=no_flatpak,
+                           no_node=no_node)
     print_updates(data)
 
     if data["total"] == 0:

@@ -14,9 +14,11 @@ class UpdateData(TypedDict):
     pacman_list: str
     aur_lines: list[str]
     flatpak_list: str
+    node_list: str
     pacman_count: int
     aur_count: int
     flatpak_count: int
+    node_count: int
     total: int
 
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 import tomllib
@@ -38,6 +39,36 @@ def c(text: str, *styles: str) -> str:
 
 
 _aur_config: AurConfig | None = None
+_node_manager: str | None = None
+
+
+def get_node_manager() -> str | None:
+    global _node_manager
+    if _node_manager is not None:
+        return _node_manager if _node_manager != "none" else None
+
+    conf = load_config().get("node", {})
+    manager: str = conf.get("manager", "auto")
+
+    if manager == "auto":
+        for name in ("pnpm", "npm"):
+            if shutil.which(name):
+                _node_manager = name
+                return name
+        _node_manager = "none"
+        return None
+
+    if manager in ("pnpm", "npm"):
+        if shutil.which(manager):
+            _node_manager = manager
+            return manager
+        print(c("error:", Fore.RED), f"package manager '{manager}' not found", file=sys.stderr)
+        sys.exit(1)
+
+    print(c("error:", Fore.RED),
+          f"invalid node.manager '{manager}' — use 'auto', 'pnpm', or 'npm'",
+          file=sys.stderr)
+    sys.exit(1)
 
 
 def get_aur_config() -> AurConfig:

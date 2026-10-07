@@ -49,6 +49,23 @@ For `build_cache_dir`, provide the name of the subdirectory under `~/.cache/` wh
 
 All four keys are required when using `helper = "custom"`. The commands must match the same interface as the built-in helpers. The output of `check_updates` must list packages in `package current_version -> new_version` format.
 
+## Node global packages
+
+```toml
+[node]
+manager = "auto"
+```
+
+| Value   | Description                                                    |
+| ------- | -------------------------------------------------------------- |
+| `auto`  | Prefer `pnpm`, fall back to `npm` (default)                    |
+| `pnpm`  | Always use `pnpm`; errors if it is not installed               |
+| `npm`   | Always use `npm`; errors if it is not installed                |
+
+When `manager` is `"auto"` and neither `pnpm` nor `npm` is installed, Node global package checks are skipped silently.
+
+Outdated global packages are listed via `<manager> outdated -g`, and updates are applied with `<manager> update -g`.
+
 ## Updates
 
 ```toml
@@ -86,6 +103,7 @@ no_flatpak = false
 no_pacman = false
 no_aur = false
 no_flatpak = false
+no_node = false
 ```
 
 Controls which update sources are queried when running `arch-updates check`.
