@@ -71,6 +71,21 @@ def get_node_manager() -> str | None:
     sys.exit(1)
 
 
+def get_node_env(manager: str) -> dict[str, str]:
+    env = os.environ.copy()
+    if manager == "pnpm":
+        extra: list[str] = []
+        pnpm_home = Path.home() / ".local" / "share" / "pnpm"
+        if pnpm_home.is_dir():
+            extra.append(str(pnpm_home))
+        pnpm_path = shutil.which("pnpm")
+        if pnpm_path:
+            extra.append(str(Path(pnpm_path).resolve().parent))
+        if extra:
+            env["PATH"] = os.pathsep.join([*extra, env.get("PATH", "")])
+    return env
+
+
 def get_aur_config() -> AurConfig:
     global _aur_config
     if _aur_config is not None:

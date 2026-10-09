@@ -22,12 +22,18 @@ def sudo_cmd(cmd: list[str]) -> list[str]:
     return cmd if is_root() else ["sudo", *cmd]
 
 
-def run_step(description: str, cmd: list[str], sudo: bool = False, input: str | None = None) -> int:
+def run_step(
+    description: str,
+    cmd: list[str],
+    sudo: bool = False,
+    input: str | None = None,
+    env: dict[str, str] | None = None,
+) -> int:
     if sudo:
         cmd = sudo_cmd(cmd)
     print(c("==>", Fore.CYAN, Style.BRIGHT), c(description, Style.BRIGHT))
     try:
-        result = subprocess.run(cmd, input=input, text=True)
+        result = subprocess.run(cmd, input=input, text=True, env=env)
     except FileNotFoundError:
         print(c("error:", Fore.RED), f"{cmd[0]} not found", file=sys.stderr)
         return 1

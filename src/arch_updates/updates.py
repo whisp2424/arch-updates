@@ -6,7 +6,13 @@ import sys
 
 from colorama import Fore, Style
 
-from arch_updates.config import get_aur_config, get_node_manager, get_terminal, load_config
+from arch_updates.config import (
+    get_aur_config,
+    get_node_env,
+    get_node_manager,
+    get_terminal,
+    load_config,
+)
 from arch_updates.news import get_unread_news
 from arch_updates.notify import notify
 from arch_updates.types import UpdateData
@@ -96,6 +102,7 @@ def get_update_data(
                 node_r = subprocess.run(
                     [manager, "outdated", "-g", "--json"],
                     capture_output=True, text=True, timeout=120,
+                    env=get_node_env(manager),
                 )
                 out = node_r.stdout.strip()
                 if out:
@@ -251,7 +258,8 @@ def do_update(no_cleanup: bool = False) -> int:
                 if manager:
                     try:
                         rc = run_step(f"Updating Node global packages ({manager})...",
-                                      [manager, "update", "-g"])
+                                      [manager, "update", "-g"],
+                                      env=get_node_env(manager))
                         if rc != 0:
                             errors.append("Node global packages")
                     except KeyboardInterrupt:
