@@ -258,7 +258,7 @@ def do_update(no_cleanup: bool = False) -> int:
                 if manager:
                     try:
                         rc = run_step(f"Updating Node global packages ({manager})...",
-                                      [manager, "update", "-g"],
+                                      [manager, "update", "-g", "--latest"],
                                       env=get_node_env(manager))
                         if rc != 0:
                             errors.append("Node global packages")
